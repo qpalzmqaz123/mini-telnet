@@ -171,7 +171,7 @@ impl Telnet {
         }
 
         // Trim result
-        res.trim().to_string();
+        res = res.trim().to_string();
 
         // Clear buffer
         self.buffer.clear();
