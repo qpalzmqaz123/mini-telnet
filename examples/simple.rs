@@ -4,20 +4,26 @@ use mini_telnet::Telnet;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    env_logger::init();
+
     let mut telnet = Telnet::builder()
-        .prompt("ubuntu@ubuntu:~$ ")
-        .login_prompt("login: ", "Password: ")
-        .connect_timeout(Duration::from_secs(10))
-        .timeout(Duration::from_secs(5))
-        .connect("192.168.100.2:23")
+        .prompt("Switch#")
+        .connect_timeout(Duration::from_secs(2))
+        .timeout(Duration::from_secs(2))
+        .page_separator(r"\[7m--More--\[m")
+        .connect("192.168.10.254:23")
         .await?;
-    telnet.login("ubuntu", "ubuntu").await?;
 
-    assert_eq!(
-        telnet.normal_execute("echo 'haha'").await?,
-        "echo 'haha'\nhaha\n",
-    );
+    let out = telnet.wait().await?;
+    println!("out: '{}'", out);
 
-    assert_eq!(telnet.execute("echo 'haha'").await?, "haha\n");
+    telnet.send("show version").await?;
+    let out = telnet.wait().await?;
+    println!("out: '{}'", out);
+
+    telnet.send("show vlan").await?;
+    let out = telnet.wait().await?;
+    println!("out: '{}'", out);
+
     Ok(())
 }
