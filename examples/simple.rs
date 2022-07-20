@@ -15,15 +15,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     let out = telnet.wait().await?;
-    println!("out: '{}'", out);
+    println!("out1: '{}'", out);
 
     telnet.send("show version").await?;
     let out = telnet.wait().await?;
-    println!("out: '{}'", out);
+    println!("out2: '{}'", out);
 
-    telnet.send("show vlan").await?;
+    telnet.send("show boot").await?;
     let out = telnet.wait().await?;
-    println!("out: '{}'", out);
+    println!("out3: '{}'", out);
+
+    let out = telnet.exec("show vlan").await?;
+    println!("out4: '{}'", out);
 
     Ok(())
 }

@@ -141,13 +141,13 @@ impl Telnet {
 
                             self.buffer.push_str(&line);
 
-                            if self.page_separator.is_match(&self.buffer) {
+                            if self.page_separator.is_match(&line) {
                                 // Print next page
                                 write.write(" \n".as_bytes()).await?;
                             }
 
                             for prompt in &self.prompts {
-                                if prompt.is_match(&self.buffer) {
+                                if prompt.is_match(&line) {
                                     break 'outer;
                                 }
                             }
@@ -177,6 +177,17 @@ impl Telnet {
         self.buffer.clear();
 
         Ok(res)
+    }
+
+    pub async fn exec(&mut self, cmd: &str) -> Result<String, TelnetError> {
+        self.send(cmd).await?;
+        let out = self.wait().await?;
+
+        if let Some(out) = out.strip_prefix(cmd) {
+            Ok(out.trim().into())
+        } else {
+            Ok(out)
+        }
     }
 }
 
