@@ -124,6 +124,58 @@ impl Telnet {
         Ok(())
     }
 
+    pub async fn wait_with(&mut self, prompt: &str) -> Result<String, TelnetError> {
+        log::trace!("Wait with `{}`", prompt);
+
+        let prompt: Regex = prompt.parse()?;
+        let (read, mut write) = self.stream.split();
+        let mut telnet = FramedRead::new(read, TelnetCodec::default());
+
+        'outer: loop {
+            match time::timeout(self.timeout, telnet.next()).await {
+                Ok(res) => match res {
+                    Some(item) => {
+                        if let Item::Line(line) = item? {
+                            let line = decode(&line)?;
+
+                            log::trace!("Recv '{}', raw: {:?}", line, line.as_bytes());
+
+                            self.buffer.push_str(&line);
+
+                            if self.page_separator.is_match(&line) {
+                                // Print next page
+                                write.write(" \n".as_bytes()).await?;
+                            }
+
+                            if prompt.is_match(&line) {
+                                break 'outer;
+                            }
+                        }
+                    }
+                    None => return Err(TelnetError::NoMoreData),
+                },
+                Err(_) => return Err(TelnetError::Timeout("read next framed".to_string())),
+            }
+        }
+
+        // Remove page_separator
+        let mut res = self
+            .page_separator
+            .replace_all(&self.buffer, "")
+            .to_string();
+
+        // Remove prompt
+        res = prompt.replace_all(&res, "").to_string();
+
+        // Trim result
+        res = res.trim().to_string();
+
+        // Clear buffer
+        self.buffer.clear();
+
+        Ok(res)
+    }
+
     pub async fn wait(&mut self) -> Result<String, TelnetError> {
         log::trace!("Wait");
 
