@@ -144,7 +144,7 @@ impl Telnet {
 
                             if self.page_separator.is_match(&line) {
                                 // Print next page
-                                write.write(" \n".as_bytes()).await?;
+                                write.write(" ".as_bytes()).await?;
                             }
 
                             if prompt.is_match(&line) {
