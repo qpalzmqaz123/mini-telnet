@@ -130,6 +130,7 @@ impl Telnet {
         let prompt: Regex = prompt.parse()?;
         let (read, mut write) = self.stream.split();
         let mut telnet = FramedRead::new(read, TelnetCodec::default());
+        let mut page_cache = String::new();
 
         'outer: loop {
             match time::timeout(self.timeout, telnet.next()).await {
@@ -140,14 +141,32 @@ impl Telnet {
 
                             log::trace!("Recv '{}', raw: {:?}", line, line.as_bytes());
 
-                            self.buffer.push_str(&line);
+                            // self.buffer.push_str(&line);
 
-                            if self.page_separator.is_match(&line) {
+                            // if self.page_separator.is_match(&line) {
+                            //     // Print next page
+                            //     write.write(" ".as_bytes()).await?;
+                            // }
+
+                            // if prompt.is_match(&line) {
+                            //     break 'outer;
+                            // }
+                            page_cache.push_str(&line);
+
+                            if self.page_separator.is_match(&page_cache) {
                                 // Print next page
                                 write.write(" ".as_bytes()).await?;
+                                self.buffer.push_str(&page_cache);
+
+                                if prompt.is_match(&page_cache) {
+                                    break 'outer;
+                                }
+
+                                page_cache.clear();
                             }
 
-                            if prompt.is_match(&line) {
+                            if prompt.is_match(&page_cache) {
+                                self.buffer.push_str(&page_cache);
                                 break 'outer;
                             }
                         }
